@@ -3,6 +3,8 @@ This project is a template to use for terraform Projects, which comes with AWS C
 
 This project ensures that AWS/Azure Credentials for different projects remain contained within the Docker environment. Which mitigates the risk of accidentally deploying into an unknown account. Although requires configuring the account logins through single-sign on on each new project. 
 
+Tested on : Apple M1 Architecture. AWS Cli Install command is Diff for X86-64 [Read Here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
+
 ## Benefits
 1. Setup new environments for new project by just cloning the repo.
 2. Easily install AWS/Azure Cli tools. Also comes pre installed with linting and security config checking tools
