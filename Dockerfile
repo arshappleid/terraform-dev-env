@@ -1,3 +1,4 @@
+# Changed base to Ubuntu 24.04
 FROM ubuntu:25.04
 
 ARG DEBIAN_FRONTEND=noninteractive
@@ -23,18 +24,17 @@ RUN curl -s https://raw.githubusercontent.com/terraform-linters/tflint/master/in
 RUN curl -s https://raw.githubusercontent.com/aquasecurity/tfsec/master/scripts/install_linux.sh | bash
 
 # Azure CLI (conditional)
-RUN if [ ${INSTALL_AZURE_CLI} = "YES" ]; then \
+RUN if [ "${INSTALL_AZURE_CLI}" = "YES" ]; then \
     curl -sL https://aka.ms/InstallAzureCLIDeb | sudo bash; \
   fi
 
 # AWS CLI (conditional)
-RUN if [ ${INSTALL_AWS_CLI} = "YES" ]; then \
-    curl -s "https://awscli.amazonaws.com/awscli-exe-linux-x86_64.zip" -o "awscliv2.zip" && \
+RUN if [ "${INSTALL_AWS_CLI}" = "YES" ]; then \
+    curl "https://awscli.amazonaws.com/awscli-exe-linux-aarch64.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
-    sudo ./aws/install && \
-    rm -rf awscliv2.zip aws; \
+    ./aws/install && \
+    rm -rf awscliv2.zip ./aws; \
   fi
-
 
 # Create user and grant passwordless sudo
 RUN adduser --disabled-password --gecos "" tfuser \
