@@ -44,7 +44,7 @@ az account show --output table
 az account list --output table ## use this to get the subscription id
 
 ## AWS Configure Login
-aws sso login --profile my-profile
+aws login --remote
 ```
 
 ## Running Linting and Security Config Checker
