@@ -10,7 +10,7 @@ ARG INSTALL_AWS_CLI
 
 # Base tools + sudo
 RUN apt-get update && apt-get install --yes --no-install-recommends \
-      curl unzip git wget bash software-properties-common lsb-release bash-completion sudo \
+      curl unzip git wget bash less software-properties-common lsb-release bash-completion sudo \
   && rm -rf /var/lib/apt/lists/*
 
 # Terraform (linux_amd64 or linux_arm64)
