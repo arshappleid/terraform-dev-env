@@ -47,5 +47,37 @@ az account list --output table ## use this to get the subscription id
 aws login --remote
 ```
 
+### Managing different Environments
+
+1. Create different Accounts (dev,stage, prod) in AWS accounts.
+2. Configure the account ARN`s in the locals variable, and inject into provider block. 
+```
+locals {
+  # Replace these ARNs with your actual Role ARNs for Dev and Prod
+  account_role_arns = {
+    default = "arn:aws:iam::123456789012:role/DevRole" # Optional fallback
+    dev     = "arn:aws:iam::111111111111:role/OrganizationAccountAccessRole"
+    prod    = "arn:aws:iam::222222222222:role/OrganizationAccountAccessRole"
+  }
+  # Safety check: Determine the ARN based on the current workspace
+  # If the workspace isn't in the map, this will fail (which prevents accidental deploys)
+  current_role_arn = local.account_role_arns[terraform.workspace]
+}
+provider "aws" {
+  region = var.region
+
+  # This block dynamically switches accounts
+  assume_role {
+    role_arn = local.current_role_arn
+  }
+}
+```
+3. Manage Terraform Workspace
+```
+terraform workspace new dev
+terraform workspace new prod
+terraform workspace select dev
+```
+
 ## Running Linting and Security Config Checker
 Both the [Terraform Lint](https://github.com/terraform-linters/tflint) and [TFSec](https://aquasecurity.github.io/tfsec/v1.20.0/guides/usage/) are configured to run on file saves, and the output is shown in the Output section of the terminal. 
