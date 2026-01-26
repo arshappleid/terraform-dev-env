@@ -57,6 +57,6 @@ RUN echo 'if [ -f /etc/bash_completion ]; then . /etc/bash_completion; fi' >> /h
  && echo '}' >> /home/tfuser/.bashrc \
  && echo '' >> /home/tfuser/.bashrc \
  && echo '# Custom prompt with Terraform workspace' >> /home/tfuser/.bashrc \
- && echo 'PS1="\[\e[32m\]\u@\h\[\e[0m\] : \[\e[34m\]\w\[\e[0m\] : \[\e[33m\]\$(tf_workspace)\[\e[0m\] \\$ "' >> /home/tfuser/.bashrc
+ && echo 'PS1="\[\e[32m\]\u@\h\[\e[0m\] : \[\e[34m\]\w\[\e[0m\] :\[\e[33m\]\$(tf_workspace)\[\e[0m\] \\$ "' >> /home/tfuser/.bashrc
 
 CMD ["tail", "-f", "/dev/null"]
