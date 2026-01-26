@@ -42,7 +42,21 @@ RUN adduser --disabled-password --gecos "" tfuser \
  && echo 'tfuser ALL=(ALL) NOPASSWD:ALL' > /etc/sudoers.d/90-tfuser \
  && chmod 0440 /etc/sudoers.d/90-tfuser
 
+## Customization to show the current terraform workspace
 USER tfuser
-RUN echo 'if [ -f /etc/bash_completion ]; then . /etc/bash_completion; fi' >> /home/tfuser/.bashrc
+RUN echo 'if [ -f /etc/bash_completion ]; then . /etc/bash_completion; fi' >> /home/tfuser/.bashrc \
+ && echo '' >> /home/tfuser/.bashrc \
+ && echo '# Function to get current Terraform workspace' >> /home/tfuser/.bashrc \
+ && echo 'tf_workspace() {' >> /home/tfuser/.bashrc \
+ && echo '  if [ -d .terraform ]; then' >> /home/tfuser/.bashrc \
+ && echo '    local ws=$(terraform workspace show 2>/dev/null)' >> /home/tfuser/.bashrc \
+ && echo '    if [ -n "$ws" ]; then' >> /home/tfuser/.bashrc \
+ && echo '      echo " ($ws)"' >> /home/tfuser/.bashrc \
+ && echo '    fi' >> /home/tfuser/.bashrc \
+ && echo '  fi' >> /home/tfuser/.bashrc \
+ && echo '}' >> /home/tfuser/.bashrc \
+ && echo '' >> /home/tfuser/.bashrc \
+ && echo '# Custom prompt with Terraform workspace' >> /home/tfuser/.bashrc \
+ && echo 'PS1="\[\e[32m\]\u@\h\[\e[0m\]:\[\e[34m\]\w\[\e[0m\]\[\e[33m\]\$(tf_workspace)\[\e[0m\]\\$ "' >> /home/tfuser/.bashrc
 
 CMD ["tail", "-f", "/dev/null"]
