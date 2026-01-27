@@ -65,11 +65,6 @@ locals {
 }
 provider "aws" {
   region = var.region
-
-  # This block dynamically switches accounts
-  assume_role {
-    role_arn = local.current_role_arn
-  }
 }
 ```
 3. Manage Terraform Workspace
