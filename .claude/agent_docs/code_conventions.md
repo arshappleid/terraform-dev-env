@@ -1,0 +1,1 @@
+Each Resource will need a unique Name Tag, which is supposed to be merged with the default_tags.

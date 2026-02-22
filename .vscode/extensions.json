@@ -1,6 +1,7 @@
 {
 	"recommendations": [
 		"hashicorp.terraform",
-		"emeraldwalk.runonsave"
+		"emeraldwalk.runonsave",
+		"anthropic.claude-code"
 	]
 }
