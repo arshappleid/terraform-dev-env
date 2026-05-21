@@ -1,0 +1,56 @@
+name: "Terraform Multi-Environment Pipeline"
+
+on:
+  pull_request:
+    branches: [ main ]
+    paths: [ 'iac/**' ]
+  push:
+    branches: [ main ]
+    paths: [ 'iac/**' ]
+
+permissions:
+  id-token: write # Required for OIDC AWS Authentication
+  contents: read
+
+env:
+  AWS_REGION: "us-east-1"
+  TERRAFORM_ROLE_ARN: "arn:aws:iam::123456789012:role/github-actions-terraform-executor"
+
+jobs:
+  terraform:
+    name: "Terraform CI/CD"
+    runs-on: ubuntu-latest
+    
+    # Executes lifecycle steps inside your pre-baked Ubuntu 26.04 container image
+    container:
+      image: ubuntu:26.04
+
+    # Enforces that all execution commands run inside the iac directory by default
+    defaults:
+      run:
+        working-directory: ./iac
+
+    steps:
+    - name: Checkout Source Code
+      uses: actions/checkout@v4
+
+    # Authenticate to AWS via OIDC using environment variables
+    - name: Configure AWS Credentials
+      uses: aws-actions/configure-aws-credentials@v4
+      with:
+        role-to-assume: ${{ env.TERRAFORM_ROLE_ARN }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    # 1. Initialize Remote State Backend & Modules
+    - name: Terraform Init
+      run: terraform init
+
+    # 2. Speculative Plan (Runs only during Pull Requests)
+    - name: Terraform Plan
+      if: github.event_name == 'pull_request'
+      run: terraform plan
+
+    # 3. Execution Deployment (Runs only on Merge to Main)
+    - name: Terraform Apply
+      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+      run: terraform apply --auto-approve
