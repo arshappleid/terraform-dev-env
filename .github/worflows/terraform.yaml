@@ -23,7 +23,7 @@ jobs:
     
     # Executes lifecycle steps inside your pre-baked Ubuntu 26.04 container image
     container:
-      image: ubuntu:26.04
+      image: hashicorp/terraform:1.15
 
     # Enforces that all execution commands run inside the iac directory by default
     defaults:
