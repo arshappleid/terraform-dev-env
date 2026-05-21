@@ -1,3 +1,5 @@
+**Author** : Prabhmeet Deol
+
 # Terraform Env with Cloud Cli tools
 This project is a template to use for terraform Projects, which comes with AWS Cli tools preinstalled. Installation of the cli tools can can configured from the Docker compose files. Additionally tools for terraform linting (TFLint) and Terraform Security have been pre installed. Additionally this project has been configured with VSCode Extensions to lint and run the security config check on each 
 
@@ -68,11 +70,16 @@ provider "aws" {
 }
 ```
 3. Manage Terraform Workspace
+
+Terraform workspaces allow to manage multiple different environments, with the **least** possibility of a drift. This way each github branch can be a new integration, rather than a separate environment.
 ```
 terraform workspace new dev
 terraform workspace new prod
 terraform workspace select dev
 ```
+## Utilizing CICD
+
+This project comes with a **github/workflows** file, which allows to easily deploy terraform changes, from the current repository. This approach could be combined with terraform workspaces to manage different environments within the Same AWS account, and continuously push changes to them with the least amount of drift.
 
 ## Running Linting and Security Config Checker
 Both the [Terraform Lint](https://github.com/terraform-linters/tflint) and [TFSec](https://aquasecurity.github.io/tfsec/v1.20.0/guides/usage/) are configured to run on file saves, and the output is shown in the Output section of the terminal. 
