@@ -25,10 +25,10 @@ jobs:
     container:
       image: hashicorp/terraform:1.15
 
-    # Enforces that all execution commands run inside the iac directory by default
+    # Run Inside the directory where the change was made. Allows to create separate directories per resources, reducing the size of terraform modules.
     defaults:
       run:
-        working-directory: ./iac
+        working-directory: ${{ matrix.dir }}
 
     steps:
     - name: Checkout Source Code
