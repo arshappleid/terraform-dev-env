@@ -83,3 +83,6 @@ This project comes with a **github/workflows** file, which allows to easily depl
 
 ## Running Linting and Security Config Checker
 Both the [Terraform Lint](https://github.com/terraform-linters/tflint) and [TFSec](https://aquasecurity.github.io/tfsec/v1.20.0/guides/usage/) are configured to run on file saves, and the output is shown in the Output section of the terminal. 
+
+## References
+1. [S3 as Backend for Terraform](https://developer.hashicorp.com/terraform/language/backend/s3)
