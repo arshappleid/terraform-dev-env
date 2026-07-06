@@ -7,6 +7,8 @@ services:
                 TERRAFORM_VERSION: "1.13.3"
                 INSTALL_AZURE_CLI: "YES"
                 INSTALL_AWS_CLI: "YES"
+                TARGETOS: "linux"
+                TARGETARCH: "amd64"
         container_name: terraform_env
         volumes:
             - ./iac/:/iac
