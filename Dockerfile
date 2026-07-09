@@ -2,11 +2,12 @@
 FROM ubuntu:25.04
 
 ARG DEBIAN_FRONTEND=noninteractive
-ARG TERRAFORM_VERSION
+ARG TERRAFORM_VERSION="1.15.8"
 ARG TARGETOS
 ARG TARGETARCH
-ARG INSTALL_AZURE_CLI
-ARG INSTALL_AWS_CLI
+ARG INSTALL_AZURE_CLI="NO"
+ARG INSTALL_AWS_CLI="NO"
+ARG INSTALL_GCP_CLI="NO"
 
 # Validate required build args
 RUN if [ -z "${TERRAFORM_VERSION}" ]; then \
@@ -17,12 +18,6 @@ RUN if [ -z "${TERRAFORM_VERSION}" ]; then \
     fi \
  && if [ "${TARGETOS}" != "linux" ]; then \
       echo "ERROR: TARGETOS must be 'linux', got '${TARGETOS}'" && exit 1; \
-    fi \
- && if [ "${INSTALL_AZURE_CLI}" != "YES" ] && [ "${INSTALL_AZURE_CLI}" != "NO" ]; then \
-      echo "ERROR: INSTALL_AZURE_CLI must be 'YES' or 'NO', got '${INSTALL_AZURE_CLI}'" && exit 1; \
-    fi \
- && if [ "${INSTALL_AWS_CLI}" != "YES" ] && [ "${INSTALL_AWS_CLI}" != "NO" ]; then \
-      echo "ERROR: INSTALL_AWS_CLI must be 'YES' or 'NO', got '${INSTALL_AWS_CLI}'" && exit 1; \
     fi
 
 # Base tools + sudo
@@ -54,6 +49,18 @@ RUN if [ "${INSTALL_AWS_CLI}" = "YES" ]; then \
     unzip awscliv2.zip && \
     ./aws/install && \
     rm -rf awscliv2.zip ./aws; \
+  fi
+
+# GCP CLI (conditional)
+RUN if [ "${INSTALL_GCP_CLI}" = "YES" ]; then \
+    if [ "${TARGETARCH}" = "amd64" ]; then GCP_ARCH="x86_64"; else GCP_ARCH="arm"; fi && \
+    curl -O "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-${GCP_ARCH}.tar.gz" && \
+    tar -xf google-cloud-cli-linux-${GCP_ARCH}.tar.gz -C /usr/local/ && \
+    /usr/local/google-cloud-sdk/install.sh --usage-reporting=false --command-completion=false --path-update=false --quiet && \
+    rm google-cloud-cli-linux-${GCP_ARCH}.tar.gz && \
+    ln -s /usr/local/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud && \
+    ln -s /usr/local/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil && \
+    ln -s /usr/local/google-cloud-sdk/bin/bq /usr/local/bin/bq; \
   fi
 
 # Create user and grant passwordless sudo
