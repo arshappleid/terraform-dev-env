@@ -28,16 +28,21 @@ docker compose up -d
 docker exec -it terraform_env /bin/bash
 ```
 
-### Inside the Container
+### Verify Install of CLI tools
 ```
-az version
+az --version
 aws --version
-
+gcloud --version
+```
+### Terraform commands
+```
 terraform init ## install all modules
 terraform apply ## Deploy everything
 terraform apply --auto-approve
 terraform destroy
-
+```
+### Cloud Provider Login
+```
 ## Configure Subscription 
 az account list --output table
 az account set --subscription "<subscription-id-or-name>"
@@ -46,6 +51,9 @@ az account list --output table ## use this to get the subscription id
 
 ## AWS Configure Login
 aws login --remote
+
+## Google Cloud Login
+gcloud auth login
 ```
 
 ### Managing different Environments
@@ -81,18 +89,10 @@ terraform workspace select dev
 Checkov can be used to statically analyze your Terraform code for security misconfigurations and compliance violations. You can run these commands from inside the container:
 
 ```bash
-# Scan the entire current directory
-checkov -d .
-
-# Scan a specific Terraform file
-checkov -f main.tf
-
-# Skip a specific check during the scan (e.g., CKV_AWS_1)
-checkov -d . --skip-check CKV_AWS_1
-
-# Output the scan results in JSON format
-checkov -d . -o json
+checkov -d . -o json # Output the scan results in JSON format
 ```
+## Pre Commit Scans
+
 ## Utilizing CICD
 
 This project comes with a **github/workflows** file, which allows to easily deploy terraform changes, from the current repository. This approach could be combined with terraform workspaces to manage different environments within the Same AWS account, and continuously push changes to them with the least amount of drift.
