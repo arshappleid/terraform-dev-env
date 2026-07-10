@@ -1,11 +1,10 @@
 **Author** : Prabhmeet Deol
 
 # Terraform Env with Cloud Cli tools
-This project is a template to use for terraform Projects, which comes with AWS Cli tools preinstalled. Installation of the cli tools can can configured from the Docker compose files. Additionally tools for terraform linting (TFLint) and Terraform Security have been pre installed. Additionally this project has been configured with VSCode Extensions to lint and run the security config check on each 
+This project is a template to use for terraform Projects, which comes with AWS Cli tools preinstalled. Installation of the cli tools can can configured from the Docker compose files. Additionally tools for terraform linting (TFLint) and Terraform Security have been pre installed. Additionally this project has been configured with VSCode Extensions to lint and run the security config check on each
 
-This project ensures that AWS/Azure Credentials for different projects remain contained within the Docker environment. Which mitigates the risk of accidentally deploying into an unknown account. Although requires configuring the account logins through single-sign on on each new project. 
+This project ensures that AWS/Azure Credentials for different projects remain contained within the Docker environment. Which mitigates the risk of accidentally deploying into an unknown account. Although requires configuring the account logins through single-sign on on each new project.
 
-Tested on : Apple M1 Architecture. AWS Cli Install command is Diff for X86-64 [Read Here](https://docs.aws.amazon.com/cli/latest/userguide/getting-started-install.html)
 
 ## Benefits
 1. Setup new environments for new project by just cloning the repo.
@@ -13,13 +12,16 @@ Tested on : Apple M1 Architecture. AWS Cli Install command is Diff for X86-64 [R
 3. Easily manage login credentials within directories, rather than having to worry about managing through x
 
 ## Requirements
-1. Docker, Docker compose. 
+1. Docker, Docker compose , Pre-Commit
 2. VsCode IDE, [Run on Save Extension](https://marketplace.visualstudio.com/items?itemName=emeraldwalk.RunOnSave)
+3. `pre-commit` (required for running local security and formatting checks before committing)
 
-## Setting up the Environment
-Ensure docker, docker compose , and the docker engine is installed.
+### Setting up the Environment
+Ensure pre-commit, docker, docker compose , and the docker engine is installed.
 ```
-brew install -y docker ## MacOS
+brew install -y docker pre-commit ## MacOS
+winget install -e --id Docker.DockerDesktop ; winget install -e --id Python.Python.3.14 ## Windows
+pip install precommit ## Windows / Linux with pip installed
 ```
 
 ### Spin up the container
@@ -37,13 +39,14 @@ gcloud --version
 ### Terraform commands
 ```
 terraform init ## install all modules
-terraform apply ## Deploy everything
-terraform apply --auto-approve
+terraform apply --auto-approve ## Deploy Infra
+terraform plan -refresh-only ## Detect Drift
+terraform apply -refresh-only ## Fix drift against current state file
 terraform destroy
 ```
 ### Cloud Provider Login
 ```
-## Configure Subscription 
+## Configure Subscription
 az account list --output table
 az account set --subscription "<subscription-id-or-name>"
 az account show --output table
@@ -59,7 +62,7 @@ gcloud auth login
 ### Managing different Environments
 
 1. Create different Accounts (dev,stage, prod) in AWS accounts.
-2. Configure the account ARN`s in the locals variable, and inject into provider block. 
+2. Configure the account ARN`s in the locals variable, and inject into provider block.
 ```
 locals {
   # Replace these ARNs with your actual Role ARNs for Dev and Prod
@@ -91,14 +94,14 @@ Checkov can be used to statically analyze your Terraform code for security misco
 ```bash
 checkov -d . -o json # Output the scan results in JSON format
 ```
-## Pre Commit Scans
 
 ## Utilizing CICD
 
 This project comes with a **github/workflows** file, which allows to easily deploy terraform changes, from the current repository. This approach could be combined with terraform workspaces to manage different environments within the Same AWS account, and continuously push changes to them with the least amount of drift.
 
 ## Running Linting and Security Config Checker
-Both the [Terraform Lint](https://github.com/terraform-linters/tflint) and [TFSec](https://aquasecurity.github.io/tfsec/v1.20.0/guides/usage/) are configured to run on file saves, and the output is shown in the Output section of the terminal. 
+Both the [Terraform Lint](https://github.com/terraform-linters/tflint) and [TFSec](https://aquasecurity.github.io/tfsec/v1.20.0/guides/usage/) are configured to run on file saves, and the output is shown in the Output section of the terminal.
 
 ## References
 1. [S3 as Backend for Terraform](https://developer.hashicorp.com/terraform/language/backend/s3)
+2. [Terraform Security Best Practices](https://www.hashicorp.com/en/blog/terraform-security-5-foundational-practices)

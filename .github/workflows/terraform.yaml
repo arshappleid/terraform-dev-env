@@ -1,80 +1,146 @@
 name: "Terraform Multi-Environment Pipeline"
 
 on:
-  pull_request:
-    branches: [ main ]
-    paths: [ 'iac/**' ]
-  push:
-    branches: [ main ]
-    paths: [ 'iac/**' ]
+    pull_request:
+        branches: [main]
+        paths: ["iac/**"]
+    push:
+        branches: [main]
+        paths: ["iac/**"]
 
 permissions:
-  id-token: write # Required for OIDC AWS Authentication
-  contents: read
-  security-events: write # Required for GitHub Advanced Security (SARIF upload)
+    id-token: write
+    contents: read
+    security-events: write
 
 env:
-  AWS_REGION: "us-east-1"
-  TERRAFORM_ROLE_ARN: "arn:aws:iam::123456789012:role/github-actions-terraform-executor"
+    AWS_REGION: "us-east-1"
+    TERRAFORM_ROLE_ARN: "arn:aws:iam::123456789012:role/github-actions-terraform-executor"
 
 jobs:
-  security-scan:
-    name: "Checkov Security Scan"
-    runs-on: ubuntu-latest
-    steps:
-      - name: Checkout Source Code
-        uses: actions/checkout@v4
+    collision-check:
+        name: "Check for Pre-existing Resources"
+        runs-on: ubuntu-latest
 
-      - name: Run Checkov against Terraform code
-        id: checkov
-        uses: bridgecrewio/checkov-action@master
-        with:
-          directory: .
-          framework: terraform
-          output_format: cli,sarif
-          output_file_path: console,results.sarif
-          soft_fail: true # Allows the pipeline to continue so SARIF can be uploaded to GHAS
+        defaults:
+            run:
+                working-directory: iac
 
-      - name: Upload SARIF results to GitHub Advanced Security
-        uses: github/codeql-action/upload-sarif@v3
-        if: success() || failure() # Run this step regardless of checkov's exit code
-        with:
-          sarif_file: results.sarif
+        steps:
+            - name: Checkout Source Code
+              uses: actions/checkout@v4
 
-  terraform:
-    name: "Terraform CI/CD"
-    runs-on: ubuntu-latest
-    
-    # Executes lifecycle steps inside your pre-baked Ubuntu 26.04 container image
-    container:
-      image: hashicorp/terraform:1.15
+            - name: Setup Terraform
+              uses: hashicorp/setup-terraform@v3
+              with:
+                  terraform_version: "1.15.8"
+                  terraform_wrapper: false
 
-    # Run Inside the directory where the change was made. Allows to create separate directories per resources, reducing the size of terraform modules.
-    defaults:
-      run:
-        working-directory: ${{ matrix.dir }}
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v6
+              with:
+                  role-to-assume: ${{ env.TERRAFORM_ROLE_ARN }}
+                  aws-region: ${{ env.AWS_REGION }}
 
-    steps:
-    - name: Checkout Source Code
-      uses: actions/checkout@v4
+            - name: Terraform Init
+              run: terraform init
 
-    # Authenticate to AWS via OIDC using environment variables
-    - name: Configure AWS Credentials
-      uses: aws-actions/configure-aws-credentials@v6
-      with:
-        role-to-assume: ${{ env.TERRAFORM_ROLE_ARN }}
-        aws-region: ${{ env.AWS_REGION }}
+            - name: Generate Terraform Plan JSON
+              run: |
+                  terraform plan -out=tfplan
+                  terraform show -json tfplan > tfplan.json
 
-    # 1. Initialize Remote State Backend & Modules
-    - name: Terraform Init
-      run: terraform init
+            - name: Resource Collision Check
+              run: |
+                  echo "Starting resource collision check for statefull resources..."
 
-    # 2. Speculative Plan (Runs only during Pull Requests)
-    - name: Terraform Plan
-      if: github.event_name == 'pull_request'
-      run: terraform plan
+                  DYNAMO_TABLES=$(jq -r '.resource_changes[]? | select(.type=="aws_dynamodb_table" and .change.actions[]=="create") | .change.after.name' tfplan.json)
+                  for TABLE in $DYNAMO_TABLES; do
+                    if [ "$TABLE" != "null" ]; then
+                      if aws dynamodb describe-table --table-name "$TABLE" >/dev/null 2>&1; then
+                        echo "ERROR: DynamoDB table '$TABLE' already exists in AWS!"
+                        exit 1
+                      fi
+                      echo "DynamoDB table '$TABLE' is available."
+                    fi
+                  done
 
-    # 3. Execution Deployment (Runs only on Merge to Main)
-    - name: Terraform Apply
-      if: github.ref == 'refs/heads/main' && github.event_name == 'push'
-      run: terraform apply --auto-approve
+                  RDS_INSTANCES=$(jq -r '.resource_changes[]? | select(.type=="aws_db_instance" and .change.actions[]=="create") | .change.after.identifier' tfplan.json)
+                  for DB in $RDS_INSTANCES; do
+                    if [ "$DB" != "null" ]; then
+                      if aws rds describe-db-instances --db-instance-identifier "$DB" >/dev/null 2>&1; then
+                        echo "ERROR: RDS Instance '$DB' already exists in AWS!"
+                        exit 1
+                      fi
+                      echo "RDS Instance '$DB' is available."
+                    fi
+                  done
+
+                  S3_BUCKETS=$(jq -r '.resource_changes[]? | select(.type=="aws_s3_bucket" and .change.actions[]=="create") | .change.after.bucket' tfplan.json)
+                  for BUCKET in $S3_BUCKETS; do
+                    if [ "$BUCKET" != "null" ]; then
+                      if aws s3api head-bucket --bucket "$BUCKET" >/dev/null 2>&1; then
+                        echo "ERROR: S3 bucket '$BUCKET' already exists in AWS!"
+                        exit 1
+                      fi
+                      echo "S3 bucket '$BUCKET' is available."
+                    fi
+                  done
+
+                  echo "No naming collisions found. All proposed resources are available to create."
+
+    security-scan:
+        name: "Checkov Security Scan"
+        runs-on: ubuntu-latest
+        steps:
+            - name: Checkout Source Code
+              uses: actions/checkout@v4
+
+            - name: Run Checkov against Terraform code
+              id: checkov
+              uses: bridgecrewio/checkov-action@master
+              with:
+                  directory: .
+                  framework: terraform
+                  output_format: cli,sarif
+                  output_file_path: console,results.sarif
+                  soft_fail: true
+
+            - name: Upload SARIF results to GitHub Advanced Security
+              uses: github/codeql-action/upload-sarif@v3
+              if: success() || failure()
+              with:
+                  sarif_file: results.sarif
+
+    terraform:
+        name: "Terraform CI/CD"
+        needs: collision-check
+        runs-on: ubuntu-latest
+
+        container:
+            image: hashicorp/terraform:1.15
+
+        defaults:
+            run:
+                working-directory: ${{ matrix.dir }}
+
+        steps:
+            - name: Checkout Source Code
+              uses: actions/checkout@v4
+
+            - name: Configure AWS Credentials
+              uses: aws-actions/configure-aws-credentials@v6
+              with:
+                  role-to-assume: ${{ env.TERRAFORM_ROLE_ARN }}
+                  aws-region: ${{ env.AWS_REGION }}
+
+            - name: Terraform Init
+              run: terraform init
+
+            - name: Terraform Plan
+              if: github.event_name == 'pull_request'
+              run: terraform plan
+
+            - name: Terraform Apply
+              if: github.ref == 'refs/heads/main' && github.event_name == 'push'
+              run: terraform apply --auto-approve
