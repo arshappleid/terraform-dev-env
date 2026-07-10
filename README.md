@@ -25,8 +25,7 @@ brew install -y docker ## MacOS
 ### Spin up the container
 ```
 docker compose up -d
-docker ps ## Take the container ID
-docker exec --interactive --tty <container_id> bash
+docker exec -it terraform_env /bin/bash
 ```
 
 ### Inside the Container
@@ -76,6 +75,23 @@ Terraform workspaces allow to manage multiple different environments, with the *
 terraform workspace new dev
 terraform workspace new prod
 terraform workspace select dev
+```
+### Running Checkov Scans
+
+Checkov can be used to statically analyze your Terraform code for security misconfigurations and compliance violations. You can run these commands from inside the container:
+
+```bash
+# Scan the entire current directory
+checkov -d .
+
+# Scan a specific Terraform file
+checkov -f main.tf
+
+# Skip a specific check during the scan (e.g., CKV_AWS_1)
+checkov -d . --skip-check CKV_AWS_1
+
+# Output the scan results in JSON format
+checkov -d . -o json
 ```
 ## Utilizing CICD
 

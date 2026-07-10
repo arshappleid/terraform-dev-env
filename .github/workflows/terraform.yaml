@@ -11,12 +11,36 @@ on:
 permissions:
   id-token: write # Required for OIDC AWS Authentication
   contents: read
+  security-events: write # Required for GitHub Advanced Security (SARIF upload)
 
 env:
   AWS_REGION: "us-east-1"
   TERRAFORM_ROLE_ARN: "arn:aws:iam::123456789012:role/github-actions-terraform-executor"
 
 jobs:
+  security-scan:
+    name: "Checkov Security Scan"
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Source Code
+        uses: actions/checkout@v4
+
+      - name: Run Checkov against Terraform code
+        id: checkov
+        uses: bridgecrewio/checkov-action@master
+        with:
+          directory: .
+          framework: terraform
+          output_format: cli,sarif
+          output_file_path: console,results.sarif
+          soft_fail: true # Allows the pipeline to continue so SARIF can be uploaded to GHAS
+
+      - name: Upload SARIF results to GitHub Advanced Security
+        uses: github/codeql-action/upload-sarif@v3
+        if: success() || failure() # Run this step regardless of checkov's exit code
+        with:
+          sarif_file: results.sarif
+
   terraform:
     name: "Terraform CI/CD"
     runs-on: ubuntu-latest

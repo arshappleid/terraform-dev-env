@@ -3,21 +3,18 @@ FROM ubuntu:25.04
 
 ARG DEBIAN_FRONTEND=noninteractive
 ARG TERRAFORM_VERSION="1.15.8"
-ARG TARGETOS
-ARG TARGETARCH
+ARG HOST_ARCH="amd64"
 ARG INSTALL_AZURE_CLI="NO"
 ARG INSTALL_AWS_CLI="NO"
 ARG INSTALL_GCP_CLI="NO"
+ARG INSTALL_CHECKOV="NO"
 
 # Validate required build args
 RUN if [ -z "${TERRAFORM_VERSION}" ]; then \
       echo "ERROR: TERRAFORM_VERSION is required" && exit 1; \
     fi \
- && if [ "${TARGETARCH}" != "amd64" ] && [ "${TARGETARCH}" != "arm64" ]; then \
-      echo "ERROR: TARGETARCH must be 'amd64' or 'arm64', got '${TARGETARCH}'" && exit 1; \
-    fi \
- && if [ "${TARGETOS}" != "linux" ]; then \
-      echo "ERROR: TARGETOS must be 'linux', got '${TARGETOS}'" && exit 1; \
+ && if [ "${HOST_ARCH}" != "amd64" ] && [ "${HOST_ARCH}" != "arm64" ]; then \
+      echo "ERROR: HOST_ARCH must be 'amd64' or 'arm64', got '${HOST_ARCH}'" && exit 1; \
     fi
 
 # Base tools + sudo
@@ -27,7 +24,7 @@ RUN apt-get update && apt-get install --yes --no-install-recommends \
   && rm -rf /var/lib/apt/lists/*
 
 # Terraform (linux_amd64 or linux_arm64)
-RUN curl -Lo /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_${TARGETOS}_${TARGETARCH}.zip" \
+RUN curl -Lo /tmp/terraform.zip "https://releases.hashicorp.com/terraform/${TERRAFORM_VERSION}/terraform_${TERRAFORM_VERSION}_linux_${HOST_ARCH}.zip" \
  && unzip /tmp/terraform.zip -d /usr/local/bin \
  && rm /tmp/terraform.zip
 
@@ -42,9 +39,8 @@ RUN if [ "${INSTALL_AZURE_CLI}" = "YES" ]; then \
   fi
 
 # AWS CLI (conditional)
-# AWS CLI uses x86_64/aarch64 naming, not amd64/arm64
 RUN if [ "${INSTALL_AWS_CLI}" = "YES" ]; then \
-    if [ "${TARGETARCH}" = "amd64" ]; then AWS_ARCH="x86_64"; else AWS_ARCH="aarch64"; fi && \
+    if [ "${HOST_ARCH}" = "amd64" ]; then AWS_ARCH="x86_64"; else AWS_ARCH="aarch64"; fi && \
     curl "https://awscli.amazonaws.com/awscli-exe-linux-${AWS_ARCH}.zip" -o "awscliv2.zip" && \
     unzip awscliv2.zip && \
     ./aws/install && \
@@ -53,7 +49,7 @@ RUN if [ "${INSTALL_AWS_CLI}" = "YES" ]; then \
 
 # GCP CLI (conditional)
 RUN if [ "${INSTALL_GCP_CLI}" = "YES" ]; then \
-    if [ "${TARGETARCH}" = "amd64" ]; then GCP_ARCH="x86_64"; else GCP_ARCH="arm"; fi && \
+    if [ "${HOST_ARCH}" = "amd64" ]; then GCP_ARCH="x86_64"; else GCP_ARCH="arm"; fi && \
     curl -O "https://dl.google.com/dl/cloudsdk/channels/rapid/downloads/google-cloud-cli-linux-${GCP_ARCH}.tar.gz" && \
     tar -xf google-cloud-cli-linux-${GCP_ARCH}.tar.gz -C /usr/local/ && \
     /usr/local/google-cloud-sdk/install.sh --usage-reporting=false --command-completion=false --path-update=false --quiet && \
@@ -61,6 +57,15 @@ RUN if [ "${INSTALL_GCP_CLI}" = "YES" ]; then \
     ln -s /usr/local/google-cloud-sdk/bin/gcloud /usr/local/bin/gcloud && \
     ln -s /usr/local/google-cloud-sdk/bin/gsutil /usr/local/bin/gsutil && \
     ln -s /usr/local/google-cloud-sdk/bin/bq /usr/local/bin/bq; \
+  fi
+
+# Checkov (conditional)
+RUN if [ "${INSTALL_CHECKOV}" = "YES" ]; then \
+    apt-get update && apt-get install --yes --no-install-recommends python3-pip python3-venv && \
+    python3 -m venv /opt/checkov-venv && \
+    /opt/checkov-venv/bin/pip install --no-cache-dir checkov && \
+    ln -s /opt/checkov-venv/bin/checkov /usr/local/bin/checkov && \
+    rm -rf /var/lib/apt/lists/*; \
   fi
 
 # Create user and grant passwordless sudo

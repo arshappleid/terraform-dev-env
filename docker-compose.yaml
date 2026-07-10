@@ -8,8 +8,8 @@ services:
                 INSTALL_AZURE_CLI: "YES"
                 INSTALL_AWS_CLI: "YES"
                 INSTALL_GCP_CLI: "YES"
-                TARGETOS: "linux"
-                TARGETARCH: "amd64"
+                INSTALL_CHECKOV: "YES"
+                HOST_ARCH: "amd64"
         container_name: terraform_env
         volumes:
             - ./iac/:/iac
